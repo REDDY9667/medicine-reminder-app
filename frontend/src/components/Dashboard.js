@@ -104,6 +104,9 @@ function Dashboard({ onLogout }) {
       <header className="dashboard-header">
         <h1>💊 Medicine Reminder Dashboard</h1>
         <div className="header-actions">
+          <button onClick={() => navigate('/analytics')} className="btn-analytics">
+            📊 Analytics
+          </button>
           <button onClick={() => navigate('/add-medicine')} className="btn-primary">
             + Add Medicine
           </button>

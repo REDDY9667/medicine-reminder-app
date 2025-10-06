@@ -4,6 +4,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import Dashboard from './components/Dashboard';
 import MedicineForm from './components/MedicineForm';
+import Analytics from './components/Analytics';
 import './App.css';
 
 function App() {
@@ -57,6 +58,14 @@ function App() {
             element={
               isAuthenticated ? 
               <Dashboard onLogout={handleLogout} /> : 
+              <Navigate to="/login" />
+            } 
+          />
+          <Route 
+            path="/analytics" 
+            element={
+              isAuthenticated ? 
+              <Analytics /> : 
               <Navigate to="/login" />
             } 
           />
