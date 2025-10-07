@@ -186,7 +186,7 @@ router.post('/check-missed', authMiddleware, async (req, res) => {
       }
     }
 
-    console.log(`✅ Checked missed doses: ${missedCount} found`);
+    //console.log(`✅ Checked missed doses: ${missedCount} found`);
 
     res.json({
       success: true,

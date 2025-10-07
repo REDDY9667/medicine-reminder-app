@@ -13,10 +13,10 @@ function Dashboard({ onLogout }) {
 
   useEffect(() => {
     loadData();
-
+    
     // Check for missed doses on page load
     handleCheckMissedDoses();
-
+    
     // Request notification permission
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
@@ -42,6 +42,7 @@ function Dashboard({ onLogout }) {
       setMedicines(medicinesRes.medicines);
       setReminders(remindersRes.reminders);
       setStats(statsRes.stats);
+      
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -72,7 +73,7 @@ function Dashboard({ onLogout }) {
     }
   };
 
-    const handleCheckMissedDoses = async () => {
+  const handleCheckMissedDoses = async () => {
     try {
       const response = await checkMissedDoses();
       if (response.success && response.missedCount > 0) {
@@ -84,7 +85,7 @@ function Dashboard({ onLogout }) {
       console.error('Failed to check missed doses:', error);
     }
   };
-  
+
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this medicine?')) {
       try {
@@ -102,6 +103,25 @@ function Dashboard({ onLogout }) {
       loadData();
     } catch (error) {
       alert('Failed to mark dose as taken');
+    }
+  };
+
+  // Check if dose is within grace period or has been missed
+  const getDoseStatus = (time) => {
+    const now = new Date();
+    const [hour, min] = time.split(':').map(Number);
+    
+    const doseTime = new Date(now);
+    doseTime.setHours(hour, min, 0, 0);
+    
+    const gracePeriodEnd = new Date(doseTime.getTime() + 30 * 60000); // 30 min grace
+    
+    if (now < doseTime) {
+      return 'upcoming'; // Dose time hasn't arrived yet
+    } else if (now >= doseTime && now <= gracePeriodEnd) {
+      return 'active'; // Within grace period
+    } else {
+      return 'missed'; // Grace period has passed
     }
   };
 
@@ -231,33 +251,54 @@ function Dashboard({ onLogout }) {
             </div>
           ) : (
             <div className="reminder-cards">
-              {reminders.map((reminder, idx) => (
-                <div key={idx} className={`reminder-card ${reminder.taken ? 'taken' : ''}`}>
-                  <div className="reminder-time">
-                    <span className="time">{reminder.time}</span>
+              {reminders.map((reminder, idx) => {
+                const doseStatus = getDoseStatus(reminder.time);
+                
+                return (
+                  <div 
+                    key={idx} 
+                    className={`reminder-card ${reminder.taken ? 'taken' : ''} ${doseStatus === 'missed' && !reminder.taken ? 'missed-dose' : ''}`}
+                  >
+                    <div className="reminder-time">
+                      <span className="time">{reminder.time}</span>
+                      {doseStatus === 'upcoming' && (
+                        <span className="status-badge upcoming">Upcoming</span>
+                      )}
+                      {doseStatus === 'active' && !reminder.taken && (
+                        <span className="status-badge active">Active</span>
+                      )}
+                      {doseStatus === 'missed' && !reminder.taken && (
+                        <span className="status-badge missed">Missed</span>
+                      )}
+                    </div>
+                    <div className="reminder-details">
+                      <h4>{reminder.medicineName}</h4>
+                      <p>{reminder.dosage}</p>
+                    </div>
+                    <div className="reminder-action">
+                      {reminder.taken ? (
+                        <span className="taken-badge">✓ Taken</span>
+                      ) : doseStatus === 'missed' ? (
+                        <button className="btn-missed" disabled>
+                          ❌ Missed
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleMarkTaken(reminder.medicineId, reminder.scheduleIndex)}
+                          className="btn-take"
+                        >
+                          Mark as Taken
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="reminder-details">
-                    <h4>{reminder.medicineName}</h4>
-                    <p>{reminder.dosage}</p>
-                  </div>
-                  <div className="reminder-action">
-                    {reminder.taken ? (
-                      <span className="taken-badge">✓ Taken</span>
-                    ) : (
-                      <button
-                        onClick={() => handleMarkTaken(reminder.medicineId, reminder.scheduleIndex)}
-                        className="btn-take"
-                      >
-                        Mark as Taken
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
       )}
+      
     </div>
   );
 }
