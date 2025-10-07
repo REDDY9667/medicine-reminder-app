@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMedicines, deleteMedicine, markDoseTaken, getStats, getUpcomingReminders } from '../services/api';
+import { getMedicines, deleteMedicine, markDoseTaken, getStats, getUpcomingReminders, checkMissedDoses } from '../services/api';
 import './Dashboard.css';
 
 function Dashboard({ onLogout }) {
@@ -13,7 +13,10 @@ function Dashboard({ onLogout }) {
 
   useEffect(() => {
     loadData();
-    
+
+    // Check for missed doses on page load
+    handleCheckMissedDoses();
+
     // Request notification permission
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
@@ -22,6 +25,7 @@ function Dashboard({ onLogout }) {
     // Check for reminders every minute
     const interval = setInterval(() => {
       checkReminders();
+      handleCheckMissedDoses(); // Also check missed doses periodically
     }, 60000);
 
     return () => clearInterval(interval);
@@ -68,6 +72,19 @@ function Dashboard({ onLogout }) {
     }
   };
 
+    const handleCheckMissedDoses = async () => {
+    try {
+      const response = await checkMissedDoses();
+      if (response.success && response.missedCount > 0) {
+        console.log(`📊 ${response.missedCount} missed dose(s) detected`);
+        // Reload data to reflect changes
+        loadData();
+      }
+    } catch (error) {
+      console.error('Failed to check missed doses:', error);
+    }
+  };
+  
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this medicine?')) {
       try {

@@ -92,3 +92,12 @@ export const getStats = async () => {
   });
   return response.data;
 };
+
+
+// Check for missed doses
+export const checkMissedDoses = async () => {
+  const response = await axios.post(`${API_URL}/reminders/check-missed`, {}, {
+    headers: getAuthHeader()
+  });
+  return response.data;
+};

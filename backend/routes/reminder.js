@@ -130,4 +130,79 @@ router.get('/stats', authMiddleware, async (req, res) => {
   }
 });
 
+
+// Check and mark missed doses
+router.post('/check-missed', authMiddleware, async (req, res) => {
+  try {
+    const medicines = await Medicine.find({ 
+      userId: req.userId,
+      isActive: true 
+    });
+
+    const now = new Date();
+    let missedCount = 0;
+    let updatedMedicines = [];
+
+    for (let medicine of medicines) {
+      let updated = false;
+      
+      for (let i = 0; i < medicine.schedule.length; i++) {
+        const slot = medicine.schedule[i];
+        const [slotHour, slotMin] = slot.time.split(':').map(Number);
+        
+        // Create dose time for today
+        const doseTime = new Date(now);
+        doseTime.setHours(slotHour, slotMin, 0, 0);
+        
+        // Calculate grace period (30 minutes)
+        const gracePeriodEnd = new Date(doseTime.getTime() + 30 * 60000);
+        
+        // If grace period passed and not taken
+        if (now > gracePeriodEnd && !slot.taken) {
+          // Check if already logged today
+          const alreadyLogged = medicine.reminderLog.some(log => {
+            const logDate = new Date(log.date);
+            return log.time === slot.time && 
+                   log.status === 'missed' &&
+                   logDate.toDateString() === now.toDateString();
+          });
+          
+          if (!alreadyLogged) {
+            medicine.reminderLog.push({
+              date: doseTime,
+              time: slot.time,
+              status: 'missed'
+            });
+            
+            missedCount++;
+            updated = true;
+          }
+        }
+      }
+      
+      if (updated) {
+        await medicine.save();
+        updatedMedicines.push(medicine.name);
+      }
+    }
+
+    console.log(`✅ Checked missed doses: ${missedCount} found`);
+
+    res.json({
+      success: true,
+      message: 'Missed doses checked',
+      missedCount,
+      updatedMedicines
+    });
+  } catch (error) {
+    console.error('Error checking missed doses:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to check missed doses',
+      error: error.message 
+    });
+  }
+});
+
+
 module.exports = router;
